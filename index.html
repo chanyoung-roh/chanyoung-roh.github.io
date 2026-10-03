@@ -360,9 +360,7 @@
   const hero = document.querySelector('.hero');
   const sections = [hero, ...document.querySelectorAll('.statement, .about, .work, .gallery, footer')];
   let stops = [], animating = false;
-  const g = { last: 0, sum: 0, fired: false, firedAt: 0, low: 0 };
-  let queued = 0;
-  const flush = () => { if (queued) { const q = queued; queued = 0; move(q); } };
+  const g = { last: 0, sum: 0, armed: true };
 
   const maxScroll = () => document.documentElement.scrollHeight - innerHeight;
   const topOf = el => el.getBoundingClientRect().top + scrollY;
@@ -395,7 +393,7 @@
     (function step(now){
       const t = Math.min((now - t0) / dur, 1);
       window.scrollTo({ top: from + dist * easeIO(t), behavior: 'instant' });
-      if (t < 1) requestAnimationFrame(step); else { animating = false; flush(); }
+      if (t < 1) requestAnimationFrame(step); else { animating = false; }
     })(t0);
   }
   function move(dir){
@@ -408,23 +406,21 @@
   addEventListener('wheel', e => {
     if (e.ctrlKey || document.documentElement.classList.contains('lb-lock')) return; // pinch-zoom / photo viewer open
     e.preventDefault();
-    // Trackpads send a stream: tiny deltas at first, then a long inertia tail.
-    // Treat the whole stream as ONE gesture, fire once the finger has clearly moved,
-    // and start a new gesture after a pause or when a fresh swipe spikes on top of the tail.
+    // ONE physical swipe = ONE step.
+    // A trackpad swipe is a stream of events (finger + 1–2 s of inertia). We fire once,
+    // then swallow everything until the stream has been quiet for 300 ms and the move is done.
     const now = performance.now();
     const d = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
-    const a = Math.abs(d);
-    if (now - g.last > 180) { g.sum = 0; g.fired = animating; g.firedAt = now - 300; } // mid-ride: only a clear new swipe counts
-    else if (g.fired && now - g.firedAt > 300 && a >= 10 && a > g.low * 3) { g.sum = 0; g.fired = false; } // inertia only decays; a rise = new swipe
+    const quiet = now - g.last;
     g.last = now;
-    g.low = g.fired ? Math.min(g.low, a) : a;
-    if (g.fired) return;
-    g.sum += d;
-    if (Math.abs(g.sum) >= 24) {
-      g.fired = true; g.firedAt = now;
-      if (animating) queued = Math.sign(g.sum);   // swiped again mid-ride: do it right after
-      else move(Math.sign(g.sum));
+    if (animating) return;                          // still moving: this is the same swipe's tail
+    if (!g.armed){
+      if (quiet < 300) return;                      // tail still flowing
+      g.armed = true; g.sum = 0;
     }
+    if (Math.abs(d) < 3 && Math.abs(g.sum) < 1) return;   // ignore inertia crumbs as a gesture start
+    g.sum += d;
+    if (Math.abs(g.sum) >= 24){ g.armed = false; move(Math.sign(g.sum)); }
   }, { passive: false });
 
   addEventListener('keydown', e => {
