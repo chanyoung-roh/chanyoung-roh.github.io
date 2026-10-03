@@ -396,7 +396,7 @@
     if (Math.abs(dist) < 2) return;
     const heroEnd = hero.offsetHeight - innerHeight + 2;
     const isHero = from <= heroEnd && target <= heroEnd;
-    const dur = isHero ? 1700 : 750;       // the whole intro in one smooth ride
+    const dur = isHero ? 2000 : 750;       // the whole intro in one smooth ride
     const t0 = performance.now();
     animating = true;
     (function step(now){
