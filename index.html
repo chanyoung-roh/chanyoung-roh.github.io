@@ -360,7 +360,7 @@
   const hero = document.querySelector('.hero');
   const sections = [hero, ...document.querySelectorAll('.statement, .about, .work, .gallery, footer')];
   let stops = [], animating = false;
-  const g = { last: 0, sum: 0, armed: true };
+  const g = { last: 0, hist: [], spent: false };
   // Open the page with ?debug to see every wheel event and every move (for tuning on a real trackpad)
   const DEBUG = new URLSearchParams(location.search).has('debug');
   let dbgBox = null, dbgLines = [];
@@ -396,7 +396,7 @@
     if (Math.abs(dist) < 2) return;
     const heroEnd = hero.offsetHeight - innerHeight + 2;
     const isHero = from <= heroEnd && target <= heroEnd;
-    const dur = isHero ? 2000 : 750;       // the whole intro in one smooth ride
+    const dur = isHero ? 2000 : 600;       // the whole intro in one smooth ride
     const t0 = performance.now();
     animating = true;
     (function step(now){
@@ -415,22 +415,28 @@
   addEventListener('wheel', e => {
     if (e.ctrlKey || document.documentElement.classList.contains('lb-lock')) return; // pinch-zoom / photo viewer open
     e.preventDefault();
-    // ONE physical swipe = ONE step.
-    // A trackpad swipe is a stream of events (finger + 1–2 s of inertia). We fire once,
-    // then swallow everything until the move is done AND the stream has been quiet for 450 ms.
+    // ONE swipe = ONE step, and a new swipe works right away (even while the old inertia is still coming).
+    // Trick: inertia only ever slows down; a real finger swipe speeds up. So we fire when the stream
+    // is ACCELERATING, and after firing we wait until it has slowed down (inertia) before allowing another.
     const now = performance.now();
     const d = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
-    const quiet = now - g.last;
+    const a = Math.abs(d);
+    if (now - g.last > 200) { g.hist = []; g.spent = false; }   // a pause = a brand-new stream
     g.last = now;
-    dbg(`${Math.round(d)} · gap ${Math.round(quiet)}ms${animating ? ' · (moving)' : ''}`);
-    if (animating) return;                          // still moving: this is the same swipe's tail
-    if (!g.armed){
-      if (quiet < 450) return;                      // tail still flowing
-      g.armed = true; g.sum = 0;
+    g.hist.push(a); if (g.hist.length > 60) g.hist.shift();
+    const avg = n => { const s = g.hist.slice(-n); return s.reduce((x, y) => x + y, 0) / s.length; };
+    const h = g.hist, n = h.length;
+    const accel = n <= 5 ? h[n - 1] > h[0] + 1 : avg(4) > avg(30) * 1.15;
+    const decel = n > 5 && avg(4) < avg(30) * 0.85;
+    if (decel) g.spent = false;                       // we've seen it slow down → next speed-up is a new swipe
+    dbg(`${Math.round(d)} · ${accel ? 'accel' : decel ? 'decel' : '—'}${g.spent ? ' · spent' : ''}${animating ? ' · moving' : ''}`);
+    if (animating || g.spent) return;
+    const mouseNotch = n === 1 && a >= 40;            // classic mouse wheel: one big tick
+    if (mouseNotch || (accel && a >= 4)){
+      g.spent = true;
+      dbg('▶ MOVE ' + (d > 0 ? 'down' : 'up'), true);
+      move(Math.sign(d));
     }
-    if (Math.abs(d) < 3 && Math.abs(g.sum) < 1) return;   // ignore inertia crumbs as a gesture start
-    g.sum += d;
-    if (Math.abs(g.sum) >= 24){ g.armed = false; dbg('▶ MOVE ' + (g.sum > 0 ? 'down' : 'up'), true); move(Math.sign(g.sum)); }
   }, { passive: false });
 
   addEventListener('keydown', e => {
