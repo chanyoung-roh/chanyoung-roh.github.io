@@ -361,6 +361,15 @@
   const sections = [hero, ...document.querySelectorAll('.statement, .about, .work, .gallery, footer')];
   let stops = [], animating = false;
   const g = { last: 0, sum: 0, armed: true };
+  // Open the page with ?debug to see every wheel event and every move (for tuning on a real trackpad)
+  const DEBUG = new URLSearchParams(location.search).has('debug');
+  let dbgBox = null, dbgLines = [];
+  function dbg(msg, strong){
+    if (!DEBUG) return;
+    if (!dbgBox){ dbgBox = document.createElement('pre'); dbgBox.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:99;max-height:46vh;overflow:hidden;margin:0;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.82);color:#9f9;font:11px/1.35 ui-monospace,Menlo,monospace;pointer-events:none;min-width:220px'; document.body.append(dbgBox); }
+    dbgLines.push(strong ? `<b style="color:#fe748a">${msg}</b>` : msg);
+    dbgLines = dbgLines.slice(-40); dbgBox.innerHTML = dbgLines.join('\n');
+  }
 
   const maxScroll = () => document.documentElement.scrollHeight - innerHeight;
   const topOf = el => el.getBoundingClientRect().top + scrollY;
@@ -372,7 +381,7 @@
     const max = maxScroll(), vh = innerHeight, pts = [];
     sections.forEach(el => {
       const top = topOf(el), h = el.offsetHeight;
-      if (el === hero) { const run = h - vh; pts.push(top, top + run * .5, top + run); return; } // hero: start → ROH → Chanyoung ROH
+      if (el === hero) { pts.push(top, top + h - vh); return; } // hero: one swipe plays Reason Over Hype → ROH → Chanyoung ROH
       const s0 = stopOf(el), end = top + h - vh;
       pts.push(s0);
       for (let y = s0 + vh * .8; y < end; y += vh * .8) pts.push(y);        // tall sections: page through
@@ -387,7 +396,7 @@
     if (Math.abs(dist) < 2) return;
     const heroEnd = hero.offsetHeight - innerHeight + 2;
     const isHero = from <= heroEnd && target <= heroEnd;
-    const dur = isHero ? 1100 : 750;       // hero stages get a slower ride so the animation reads
+    const dur = isHero ? 1700 : 750;       // the whole intro in one smooth ride
     const t0 = performance.now();
     animating = true;
     (function step(now){
@@ -408,19 +417,20 @@
     e.preventDefault();
     // ONE physical swipe = ONE step.
     // A trackpad swipe is a stream of events (finger + 1–2 s of inertia). We fire once,
-    // then swallow everything until the stream has been quiet for 300 ms and the move is done.
+    // then swallow everything until the move is done AND the stream has been quiet for 450 ms.
     const now = performance.now();
     const d = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
     const quiet = now - g.last;
     g.last = now;
+    dbg(`${Math.round(d)} · gap ${Math.round(quiet)}ms${animating ? ' · (moving)' : ''}`);
     if (animating) return;                          // still moving: this is the same swipe's tail
     if (!g.armed){
-      if (quiet < 300) return;                      // tail still flowing
+      if (quiet < 450) return;                      // tail still flowing
       g.armed = true; g.sum = 0;
     }
     if (Math.abs(d) < 3 && Math.abs(g.sum) < 1) return;   // ignore inertia crumbs as a gesture start
     g.sum += d;
-    if (Math.abs(g.sum) >= 24){ g.armed = false; move(Math.sign(g.sum)); }
+    if (Math.abs(g.sum) >= 24){ g.armed = false; dbg('▶ MOVE ' + (g.sum > 0 ? 'down' : 'up'), true); move(Math.sign(g.sum)); }
   }, { passive: false });
 
   addEventListener('keydown', e => {
