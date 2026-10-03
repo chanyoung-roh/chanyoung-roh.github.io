@@ -15,11 +15,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <script>
-  // Set theme before paint: saved choice → OS setting
+  // Set theme before paint: saved choice → dark
   (function(){
     var t = null;
     try { t = localStorage.getItem('theme'); } catch(e){}
-    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    if (t !== 'light' && t !== 'dark') t = 'dark';   // default: dark (a saved choice still wins)
     document.documentElement.dataset.theme = t;
   })();
 </script>
