@@ -52,7 +52,7 @@
     color-scheme:dark;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth}
+  html{scroll-behavior:smooth;overscroll-behavior-y:none}
   body{font-optical-sizing:auto;transition:background .35s,color .35s;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;font-weight:600;line-height:1.55;-webkit-font-smoothing:antialiased}
   a{color:inherit}
   a:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
@@ -384,7 +384,7 @@
       if (el === hero) { pts.push(top, top + h - vh); return; } // hero: one swipe plays Reason Over Hype → ROH → Chanyoung ROH
       const s0 = stopOf(el), end = top + h - vh;
       pts.push(s0);
-      for (let y = s0 + vh * .8; y < end; y += vh * .8) pts.push(y);        // tall sections: page through
+      for (let y = s0 + vh * .8; y < end - vh * .25; y += vh * .8) pts.push(y);        // tall sections: page through
       if (end - s0 > vh * .25) pts.push(end);                                // skip tiny leftover steps
     });
     stops = [...new Set(pts.map(p => Math.round(Math.min(Math.max(p, 0), max))))].sort((a, b) => a - b);
@@ -445,6 +445,24 @@
     const up = ['ArrowUp', 'PageUp'].includes(e.key) || (e.key === ' ' && e.shiftKey);
     if (down || up) { e.preventDefault(); move(down ? 1 : -1); }
   });
+
+  // Touch (phones/tablets): one swipe = one step. We block the native scroll and move ourselves.
+  // Pinch-zoom (2 fingers) and sideways swipes are left alone; taps still click links normally.
+  const T = { y: 0, x: 0, fired: false, active: false };
+  addEventListener('touchstart', e => {
+    if (e.touches.length !== 1 || document.documentElement.classList.contains('lb-lock')) { T.active = false; return; }
+    T.active = true; T.fired = false; T.y = e.touches[0].clientY; T.x = e.touches[0].clientX;
+  }, { passive: true });
+  addEventListener('touchmove', e => {
+    if (!T.active || e.touches.length !== 1) return;
+    const dy = T.y - e.touches[0].clientY, dx = T.x - e.touches[0].clientX;
+    if (Math.abs(dx) > Math.abs(dy) && !T.fired) return;          // sideways: not ours
+    e.preventDefault();                                             // no native scroll / rubber-band
+    if (T.fired || animating || Math.abs(dy) < 30) return;
+    T.fired = true; dbg('▶ TOUCH ' + (dy > 0 ? 'down' : 'up'), true);
+    move(Math.sign(dy));
+  }, { passive: false });
+  addEventListener('touchend', () => { T.active = false; }, { passive: true });
 
   // Nav links: jump to the section with the same ride
   document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', e => {
