@@ -379,7 +379,7 @@
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const hero = document.querySelector('.hero');
   const sections = [hero, ...document.querySelectorAll('.statement, .about, .work, .gallery, footer')];
-  let stops = [], animating = false;
+  let stops = [], animating = false, pending = 0;
   const g = { last: 0, hist: [], spent: false };
   // Open the page with ?debug to see every wheel event and every move (for tuning on a real trackpad)
   const DEBUG = new URLSearchParams(location.search).has('debug');
@@ -422,7 +422,7 @@
     (function step(now){
       const t = Math.min((now - t0) / dur, 1);
       window.scrollTo({ top: from + dist * easeIO(t), behavior: 'instant' });
-      if (t < 1) requestAnimationFrame(step); else { animating = false; }
+      if (t < 1) requestAnimationFrame(step); else { animating = false; if (pending) { const p = pending; pending = 0; move(p); } }
     })(t0);
   }
   function move(dir){
@@ -431,31 +431,36 @@
     const next = dir > 0 ? stops.find(s => s > y + 4) : [...stops].reverse().find(s => s < y - 4);
     if (next !== undefined) go(next);
   }
+  // Input while a ride is playing: remember ONE step and play it when the ride ends
+  const request = dir => { if (animating) pending = dir; else move(dir); };
 
   addEventListener('wheel', e => {
     if (e.ctrlKey || document.documentElement.classList.contains('lb-lock')) return; // pinch-zoom / photo viewer open
     e.preventDefault();
-    // ONE swipe = ONE step, and a new swipe works right away (even while the old inertia is still coming).
-    // Trick: inertia only ever slows down; a real finger swipe speeds up. So we fire when the stream
-    // is ACCELERATING, and after firing we wait until it has slowed down (inertia) before allowing another.
+    // ONE scroll = ONE step, however light it is.
+    // A new gesture (after a 200 ms pause) moves on its very FIRST tick, so a single gentle
+    // mouse-wheel notch is enough. The rest of that stream (trackpad inertia, a fast wheel spin)
+    // is swallowed. A second trackpad swipe thrown into the old inertia is still caught:
+    // inertia only slows down, a real finger speeds up again.
+    // Scrolling while the page is still moving queues that step; it plays right after.
     const now = performance.now();
     const d = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
     const a = Math.abs(d);
-    if (now - g.last > 200) { g.hist = []; g.spent = false; }   // a pause = a brand-new stream
+    if (now - g.last > 200) { g.hist = []; g.spent = false; }   // a pause = a brand-new gesture
     g.last = now;
+    if (a < 1 || Math.abs(e.deltaX) > a) return;               // crumbs / sideways swipe
     g.hist.push(a); if (g.hist.length > 60) g.hist.shift();
     const avg = n => { const s = g.hist.slice(-n); return s.reduce((x, y) => x + y, 0) / s.length; };
-    const h = g.hist, n = h.length;
-    const accel = n <= 5 ? h[n - 1] > h[0] + 1 : avg(4) > avg(30) * 1.15;
+    const n = g.hist.length;
+    const accel = n > 5 && avg(4) > avg(30) * 1.15;
     const decel = n > 5 && avg(4) < avg(30) * 0.85;
-    if (decel) g.spent = false;                       // we've seen it slow down → next speed-up is a new swipe
-    dbg(`${Math.round(d)} · ${accel ? 'accel' : decel ? 'decel' : '—'}${g.spent ? ' · spent' : ''}${animating ? ' · moving' : ''}`);
-    if (animating || g.spent) return;
-    const mouseNotch = n === 1 && a >= 40;            // classic mouse wheel: one big tick
-    if (mouseNotch || (accel && a >= 4)){
+    if (decel) g.spent = false;                       // it slowed down → the next speed-up is a new swipe
+    dbg(`${Math.round(d)} · ${n === 1 ? 'new' : accel ? 'accel' : decel ? 'decel' : '—'}${g.spent ? ' · spent' : ''}${animating ? ' · moving' : ''}`);
+    if (g.spent) return;
+    if (n === 1 || accel){
       g.spent = true;
-      dbg('▶ MOVE ' + (d > 0 ? 'down' : 'up'), true);
-      move(Math.sign(d));
+      dbg('▶ MOVE ' + (d > 0 ? 'down' : 'up') + (animating ? ' (queued)' : ''), true);
+      request(Math.sign(d));
     }
   }, { passive: false });
 
@@ -463,7 +468,7 @@
     if (document.documentElement.classList.contains('lb-lock') || e.target.closest('input, textarea, [contenteditable]')) return;
     const down = ['ArrowDown', 'PageDown'].includes(e.key) || (e.key === ' ' && !e.shiftKey);
     const up = ['ArrowUp', 'PageUp'].includes(e.key) || (e.key === ' ' && e.shiftKey);
-    if (down || up) { e.preventDefault(); move(down ? 1 : -1); }
+    if (down || up) { e.preventDefault(); request(down ? 1 : -1); }
   });
 
   // Touch (phones/tablets): one swipe = one step. We block the native scroll and move ourselves.
