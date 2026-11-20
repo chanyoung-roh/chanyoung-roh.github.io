@@ -607,6 +607,7 @@
   // ▼ Paste your Apps Script web-app URL (ends with /exec). Empty = demo mode (notes live only in this tab).
   const GB_API = 'https://script.google.com/macros/s/AKfycbx89Qbe9A_wBw1F6I4vnWXFWFD63EdALsZajkg6hM6Tzdl5RIKp5_meLSIL1UuJ0aua/exec';
   const MAX_NAME = 10, MAX_MEMO = 8;
+  const NOTE_TTL = 48 * 3600 * 1000;                     // a note stays up for 2 days, then peels off
   const root = document.documentElement, bear = document.getElementById('gbBear');
   const bearImg = document.getElementById('gbBearImg');
   const BEARS = ['images/bear-1.png', 'images/bear-2.png', 'images/bear-3.png'];   // 1 = line art (inverted in dark mode)
@@ -656,7 +657,7 @@
     if (loaded || !GB_API) return; loaded = true;
     try {
       const r = await fetch(`${GB_API}?_=${Date.now()}`); const j = await r.json();
-      if (j.ok) j.notes.forEach(n => renderNote(n));
+      if (j.ok) j.notes.filter(n => Date.now() - n.t < NOTE_TTL).forEach(n => renderNote(n));
     } catch (e) { loaded = false; console.warn('guestbook: load failed', e); }
   }
   function reveal(){ root.classList.add('gb-found'); store.set('roh-gb-found', '1'); loadNotes(); }
