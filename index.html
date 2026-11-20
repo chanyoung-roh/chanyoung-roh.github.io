@@ -186,6 +186,41 @@
     .tagline{opacity:1;transform:none}
   }
   @media (max-width:420px){ nav .wrap{padding:0 16px} .nav-right{gap:10px} nav ul{gap:12px;font-size:14px} .mark{font-size:20px} }
+
+  /* Easter egg: a tiny bear crawls across the page now and then. Catch it → stick a note right there. */
+  .gb-bear{position:fixed;left:0;top:0;z-index:9;width:74px;height:74px;margin:-37px 0 0 -37px;padding:6px;border:0;background:none;cursor:pointer;
+           opacity:0;transition:opacity .6s;-webkit-tap-highlight-color:transparent}
+  .gb-bear.on{opacity:1}
+  .gb-bear img{display:block;width:100%;height:100%;user-select:none;-webkit-user-drag:none;transform-origin:50% 85%;animation:gb-waddle .9s ease-in-out infinite;filter:drop-shadow(0 4px 4px rgba(0,0,0,.18))}
+  .gb-bear.sit img{animation-play-state:paused}
+  :root[data-theme="dark"] .gb-bear img.ink{filter:invert(1) drop-shadow(0 4px 4px rgba(0,0,0,.18))}
+  .gb-bear.pop{transition:opacity .35s,transform .35s;transform:scale(1.6);opacity:0;pointer-events:none}
+  @keyframes gb-waddle{0%,100%{transform:rotate(-8deg)}25%,75%{transform:rotate(0) translateY(-3px)}50%{transform:rotate(8deg)}}
+  .gb-layer{position:absolute;inset:0;z-index:4;pointer-events:none}
+  .gb-note,.gb-form{position:absolute;transform:translate(-50%,-50%) rotate(var(--r,0deg));color:#000;font-family:var(--body);text-align:center;
+           box-shadow:0 10px 22px -12px rgba(0,0,0,.55),0 1px 0 rgba(0,0,0,.06)}
+  .gb-note{min-width:84px;max-width:150px;padding:14px 12px 10px;border-radius:4px 4px 14px 4px;background:var(--c,#ffe58a);
+           opacity:0;display:none;animation:gb-stick .45s cubic-bezier(.2,1.4,.4,1) forwards}
+  html.gb-found .gb-note{display:block}
+  .gb-note::before{content:"";position:absolute;top:-5px;left:50%;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:var(--accent);box-shadow:0 2px 3px rgba(0,0,0,.3)}
+  .gb-note b{display:block;font-weight:900;font-size:17px;line-height:1.2;letter-spacing:-.02em;word-break:keep-all;overflow-wrap:anywhere}
+  .gb-note i{display:block;margin-top:6px;font-style:normal;font-weight:700;font-size:12px;opacity:.6}
+  .gb-note.mine{outline:2px dashed rgba(0,0,0,.35);outline-offset:3px}
+  @keyframes gb-stick{from{opacity:0;transform:translate(-50%,-90%) rotate(var(--r,0deg)) scale(1.15)}to{opacity:1;transform:translate(-50%,-50%) rotate(var(--r,0deg))}}
+  .gb-form{z-index:2;width:200px;padding:14px;border-radius:14px;background:#fff9ef;pointer-events:auto;display:grid;gap:8px;--r:-2deg;
+           animation:gb-stick .4s cubic-bezier(.2,1.4,.4,1) both}
+  .gb-form p{font-weight:900;font-size:14px;letter-spacing:-.01em}
+  .gb-form input{width:100%;padding:9px 10px;border:1.5px solid rgba(0,0,0,.15);border-radius:9px;background:#fff;color:#000;font:700 15px/1.2 var(--body);outline:none}
+  .gb-form input:focus{border-color:var(--accent)}
+  .gb-form .hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+  .gb-form .row{display:flex;align-items:center;gap:8px}
+  .gb-form .cnt{margin-left:auto;font-size:12px;font-weight:800;color:rgba(0,0,0,.45)}
+  .gb-form button{border:0;border-radius:999px;cursor:pointer;font:800 14px/1 var(--body)}
+  .gb-form .go{padding:9px 14px;background:var(--accent);color:#000}
+  .gb-form .go:disabled{opacity:.5;cursor:default}
+  .gb-form .x{position:absolute;top:6px;right:6px;width:26px;height:26px;background:transparent;color:rgba(0,0,0,.45);font-size:16px}
+  .gb-form .msg{font-size:12px;font-weight:700;color:#c0304a;min-height:0}
+  @media (prefers-reduced-motion:reduce){ .gb-bear img{animation:none} .gb-note,.gb-form{animation:none;opacity:1} }
 </style>
 </head>
 <body>
@@ -563,6 +598,171 @@
     if (e.key === 'ArrowRight') show(cur + 1);
   });
   list().then(p => { photos = p; render(); });
+})();
+</script>
+<!-- Easter egg: the crawling bear + its sticky notes. Backend = Google Sheets (Apps Script web app). -->
+<button class="gb-bear" id="gbBear" type="button" tabindex="-1" aria-label="A tiny bear" hidden><img id="gbBearImg" src="images/bear-3.png" alt="" width="62" height="62" draggable="false"></button>
+<script>
+(() => {
+  // ▼ Paste your Apps Script web-app URL (ends with /exec). Empty = demo mode (notes live only in this tab).
+  const GB_API = 'https://script.google.com/macros/s/AKfycbx89Qbe9A_wBw1F6I4vnWXFWFD63EdALsZajkg6hM6Tzdl5RIKp5_meLSIL1UuJ0aua/exec';
+  const MAX_NAME = 10, MAX_MEMO = 8;
+  const root = document.documentElement, bear = document.getElementById('gbBear');
+  const bearImg = document.getElementById('gbBearImg');
+  const BEARS = ['images/bear-1.png', 'images/bear-2.png', 'images/bear-3.png'];   // 1 = line art (inverted in dark mode)
+  BEARS.forEach(src => { new Image().src = src; });
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const params = new URLSearchParams(location.search);
+  const ANCHORS = { hero: '.hero .stage', statement: '.statement', about: '#about', work: '#work', gallery: '#gallery', contact: '#contact' };
+  const COLORS = ['#ffe58a', '#ffc6cf', '#c4f0da', '#cfe6ff', '#e4d8ff', '#ffd9b3'];
+  const chars = s => Array.from(s);                       // count by code point: 한글 1자 = 1
+  const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } },
+                  set(k, v){ try { localStorage.setItem(k, v); } catch {} } };
+
+  // Each anchor gets a transparent layer; notes are stored as (anchor, x%, y%) so they stay put on any screen size.
+  const layers = {};
+  for (const [k, sel] of Object.entries(ANCHORS)) {
+    const el = document.querySelector(sel); if (!el) continue;
+    if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+    const L = document.createElement('div'); L.className = 'gb-layer'; L.dataset.anchor = k; el.append(L);
+    layers[k] = { el, L };
+  }
+  const anchorAt = (cx, cy) => {
+    for (const [k, { el }] of Object.entries(layers)) {
+      const r = el.getBoundingClientRect();
+      if (cy >= r.top && cy < r.bottom && r.height > 0) return { k, x: (cx - r.left) / r.width, y: (cy - r.top) / r.height };
+    }
+    return null;
+  };
+  const hash = s => { let h = 7; for (const c of s) h = (h * 31 + c.codePointAt(0)) >>> 0; return h; };
+  const place = (node, n) => {
+    node.style.left = `clamp(80px, ${(n.x * 100).toFixed(2)}%, calc(100% - 80px))`;
+    node.style.top = `clamp(50px, ${(n.y * 100).toFixed(2)}%, calc(100% - 50px))`;
+  };
+  function renderNote(n, mine){
+    const lay = layers[n.a]; if (!lay) return;
+    const h = hash(`${n.t}${n.name}${n.memo}`);
+    const d = document.createElement('div'); d.className = 'gb-note' + (mine ? ' mine' : '');
+    d.style.setProperty('--c', COLORS[h % COLORS.length]);
+    d.style.setProperty('--r', `${(h % 13) - 6}deg`);
+    d.style.animationDelay = mine ? '0s' : `${Math.min(lay.L.children.length * 60, 900)}ms`;
+    const b = document.createElement('b'); b.textContent = n.memo;
+    const i = document.createElement('i'); i.textContent = '— ' + n.name;
+    d.append(b, i); place(d, n); lay.L.append(d);
+  }
+
+  let loaded = false;
+  async function loadNotes(){
+    if (loaded || !GB_API) return; loaded = true;
+    try {
+      const r = await fetch(`${GB_API}?_=${Date.now()}`); const j = await r.json();
+      if (j.ok) j.notes.forEach(n => renderNote(n));
+    } catch (e) { loaded = false; console.warn('guestbook: load failed', e); }
+  }
+  function reveal(){ root.classList.add('gb-found'); store.set('roh-gb-found', '1'); loadNotes(); }
+  if (store.get('roh-gb-found') === '1') reveal();       // found it before → the notes stay visible for you
+
+  // ---------- the bear ----------
+  let walking = false, timer = 0;
+  const busy = () => document.hidden || root.classList.contains('lb-lock') || document.querySelector('.gb-form');
+  function schedule(ms){ clearTimeout(timer); timer = setTimeout(walk, ms); }
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  function walk(){
+    if (busy()) return schedule(8000);
+    walking = true;
+    const pick = Math.floor(Math.random() * BEARS.length);
+    bearImg.src = BEARS[pick]; bearImg.classList.toggle('ink', pick === 0);
+    const W = innerWidth, H = innerHeight, ltr = Math.random() < .5;
+    const S = { x: ltr ? -40 : W + 40, y: rnd(.22, .85) * H }, E = { x: ltr ? W + 40 : -40, y: rnd(.22, .85) * H };
+    const dur = reduce ? 9000 : Math.max(11000, W * 13);  // slow toddle: ~13 ms per px
+    const amp = rnd(20, 60), waves = rnd(1, 2.5), pauseAt = rnd(.3, .7);
+    let t0 = performance.now(), paused = 0, sat = false;
+    bear.hidden = false; bear.classList.remove('pop', 'sit');
+    if (reduce) {                                          // no crawling: fade in somewhere, wait, fade out
+      bear.style.transform = `translate(${rnd(.15, .85) * W}px, ${rnd(.25, .8) * H}px)`;
+      requestAnimationFrame(() => bear.classList.add('on'));
+      setTimeout(() => { if (walking) hide(); }, dur);
+      return;
+    }
+    bear.classList.add('on');
+    (function step(now){
+      if (!walking) return;
+      let t = (now - t0 - paused) / dur;
+      if (!sat && t >= pauseAt) { sat = true; bear.classList.add('sit'); const p0 = now;  // sit down for a moment
+        return setTimeout(() => { paused += performance.now() - p0; bear.classList.remove('sit'); requestAnimationFrame(step); }, rnd(900, 1800)); }
+      if (t >= 1) return hide();
+      const x = S.x + (E.x - S.x) * t, y = S.y + (E.y - S.y) * t + Math.sin(t * Math.PI * 2 * waves) * amp;
+      const lean = (ltr ? 1 : -1) * 6;
+      bear.style.transform = `translate(${x}px, ${y}px) rotate(${lean}deg)`;
+      requestAnimationFrame(step);
+    })(t0);
+  }
+  function hide(){
+    walking = false; bear.classList.remove('on');
+    setTimeout(() => { if (!walking) bear.hidden = true; }, 650);
+    schedule(rnd(40000, 90000));
+  }
+  bear.addEventListener('click', e => {
+    const r = bear.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    walking = false; bear.classList.add('pop');
+    setTimeout(() => { bear.hidden = true; bear.classList.remove('on', 'pop'); }, 400);
+    reveal();
+    const spot = anchorAt(cx, cy) || anchorAt(cx, innerHeight / 2);
+    if (spot) openForm(spot); else schedule(30000);
+  });
+
+  // ---------- the note form, right where the bear was ----------
+  function limit(inp, max, out){
+    const fix = () => { const c = chars(inp.value); if (c.length > max) inp.value = c.slice(0, max).join(''); if (out) out.textContent = `${chars(inp.value).length}/${max}`; };
+    inp.addEventListener('input', e => { if (!e.isComposing) fix(); });   // don't cut a 한글 syllable mid-composition
+    inp.addEventListener('compositionend', fix);
+    fix();
+  }
+  function openForm(spot){
+    const lay = layers[spot.k];
+    const f = document.createElement('form'); f.className = 'gb-form'; f.autocomplete = 'off';
+    f.innerHTML = `<button class="x" type="button" aria-label="Close">✕</button>
+      <p>You caught the bear!</p>
+      <input name="name" placeholder="name" aria-label="Your name" enterkeyhint="next">
+      <input name="memo" placeholder="note · 8 chars" aria-label="Note, up to 8 characters" enterkeyhint="done">
+      <input class="hp" name="site" tabindex="-1" aria-hidden="true">
+      <div class="row"><span class="msg" role="status"></span><span class="cnt">0/8</span></div>
+      <button class="go" type="submit">Stick it</button>`;
+    place(f, spot); lay.L.append(f);
+    const [nameI, memoI] = [f.elements.name, f.elements.memo], msg = f.querySelector('.msg'), go = f.querySelector('.go');
+    nameI.value = store.get('roh-gb-name') || '';
+    limit(nameI, MAX_NAME); limit(memoI, MAX_MEMO, f.querySelector('.cnt'));
+    (nameI.value ? memoI : nameI).focus({ preventScroll: true });
+    const close = () => { f.remove(); removeEventListener('keydown', esc); schedule(rnd(40000, 90000)); };
+    const esc = e => { if (e.key === 'Escape') close(); };
+    addEventListener('keydown', esc);
+    f.querySelector('.x').addEventListener('click', close);
+    f.addEventListener('submit', async e => {
+      e.preventDefault();
+      const name = nameI.value.replace(/\s+/g, ' ').trim(), memo = memoI.value.replace(/\s+/g, ' ').trim();
+      if (!name) { msg.textContent = 'Name, please'; return nameI.focus(); }
+      if (!memo) { msg.textContent = 'Write a note'; return memoI.focus(); }
+      const note = { name, memo, a: spot.k, x: +spot.x.toFixed(4), y: +spot.y.toFixed(4), site: f.elements.site.value };
+      go.disabled = true; go.textContent = 'Sticking…'; msg.textContent = '';
+      try {
+        let saved = { ...note, t: Date.now() };
+        if (GB_API) {
+          const r = await fetch(GB_API, { method: 'POST', body: JSON.stringify(note) });   // text/plain → no CORS preflight
+          const j = await r.json();
+          if (!j.ok) throw new Error(j.error || 'rejected');
+          if (j.note) saved = j.note;
+        }
+        store.set('roh-gb-name', name);
+        close(); renderNote(saved, true);
+      } catch (err) {
+        go.disabled = false; go.textContent = 'Stick it';
+        msg.textContent = err.message === 'busy' ? 'Too busy, try again' : 'Oops, try again';
+      }
+    });
+  }
+
+  schedule(params.has('bear') ? 600 : rnd(10000, 25000));  // ?bear = summon it right away (for testing)
+  document.addEventListener('visibilitychange', () => { if (document.hidden && walking) hide(); });
 })();
 </script>
 </body>
