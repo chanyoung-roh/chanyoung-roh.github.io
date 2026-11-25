@@ -77,7 +77,8 @@
 
   /* Hero: the one big moment */
   .hero{height:300vh;position:relative}
-  .stage{position:sticky;top:0;height:100vh;padding-top:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+  /* svh = the screen height with the phone's address bar showing, so the stage never runs below what you can see */
+  .stage{position:sticky;top:0;height:100vh;height:100svh;padding-top:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
   .line{position:relative;margin-top:.35em;font-family:var(--display);font-weight:900;font-size:clamp(3rem,10.5vw,13rem);letter-spacing:-.04em;line-height:1.1;white-space:nowrap;display:flex;transform-origin:center;will-change:transform}
   .word{display:inline-flex;margin-right:.22em}
   .word:last-child{margin-right:0}
@@ -189,7 +190,7 @@
   @media (prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}
     .hero{height:auto}
-    .stage{position:relative;height:100vh}
+    .stage{position:relative;height:100vh;height:100svh}
     .tagline{opacity:1;transform:none}
   }
   @media (max-width:420px){ nav .wrap{padding:0 16px} .nav-right{gap:10px} nav ul{gap:12px;font-size:14px} .mark{font-size:20px} }
