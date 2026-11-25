@@ -556,6 +556,26 @@
   addEventListener('load', buildStops);
   document.fonts.ready.then(buildStops);
   buildStops();
+
+  // Reload: the browser's own restore puts back a raw pixel offset while the layout is still settling
+  // (fonts, hero sizing, gallery photos), so you could land a section further down (e.g. Work).
+  // Instead remember WHICH stop you were on and go back to that exact stop once everything is laid out.
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  const KEY = 'roh-stop';
+  addEventListener('pagehide', () => {
+    let i = 0; stops.forEach((s, k) => { if (s <= scrollY + 4) i = k; });
+    try { sessionStorage.setItem(KEY, i); } catch (e) {}
+  });
+  let saved = null;
+  try { saved = sessionStorage.getItem(KEY); sessionStorage.removeItem(KEY); } catch (e) {}
+  if (saved !== null && !location.hash) {
+    const loaded = document.readyState === 'complete' ? Promise.resolve() : new Promise(r => addEventListener('load', r, { once: true }));
+    Promise.all([loaded, document.fonts.ready]).then(() => {
+      buildStops();
+      const y = stops[Math.min(+saved, stops.length - 1)] || 0;
+      window.scrollTo({ top: y, behavior: 'instant' });
+    });
+  }
 })();
 </script>
 <div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Photo viewer">
