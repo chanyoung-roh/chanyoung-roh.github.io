@@ -82,7 +82,7 @@
   .word{display:inline-flex;margin-right:.22em}
   .word:last-child{margin-right:0}
   .initial{color:var(--accent)}
-  .firstname{position:absolute;bottom:100%;left:50%;margin-bottom:.12em;font-size:.3em;font-weight:900;letter-spacing:-.025em;color:var(--ink);opacity:0;transform:translate(-50%,.4em);pointer-events:none}
+  .firstname{position:absolute;bottom:100%;left:50%;margin-bottom:.12em;font-size:.38em;font-weight:900;letter-spacing:-.025em;color:var(--ink);opacity:0;transform:translate(-50%,.4em);pointer-events:none}
   .rest{display:inline-block;overflow:hidden;white-space:nowrap;padding:.12em 0 .28em;margin:-.12em 0 -.28em}
   @media (prefers-reduced-motion:reduce){.firstname{display:none}}
   .tagline{margin-top:4vh;font-weight:800;letter-spacing:-.02em;font-size:clamp(1.05rem,1.6vw,1.35rem);text-align:center;opacity:0;transform:translateY(12px);max-width:34ch}
@@ -399,7 +399,7 @@
     });
     // Final "Chanyoung / ROH / tagline" block is top-heavy, so slide it (and the tagline) down a bit as it grows
     const em = parseFloat(line.style.fontSize) || 0, drop = s * .5 * em;
-    line.style.transform = `translateY(${drop - s * .15 * em}px) scale(${1 + s * .9})`;
+    line.style.transform = `translateY(${drop - s * .15 * em}px) scale(${1 + s * .7})`;
 
     const f = ease(clamp((p - .55) / .25, 0, 1));   // stage 2: first name appears
     firstname.style.opacity = f;
