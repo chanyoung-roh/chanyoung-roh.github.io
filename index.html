@@ -80,7 +80,7 @@
   :root[data-theme="dark"] .theme-btn .moon{display:block}
 
   /* Hero: the one big moment */
-  .hero{height:300vh;position:relative}
+  .hero{height:100vh;height:100svh;position:relative}   /* one screen: the intro plays by itself, no scrolling needed */
   /* svh = the screen height with the phone's address bar showing, so the stage never runs below what you can see */
   .stage{position:sticky;top:0;height:100vh;height:100svh;padding-top:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
   .line{position:relative;margin-top:.35em;font-family:var(--display);font-weight:900;font-size:clamp(3rem,10.5vw,13rem);letter-spacing:-.04em;line-height:1.1;white-space:nowrap;display:flex;transform-origin:center;will-change:transform}
@@ -270,7 +270,7 @@
 </nav>
 
 <main id="top">
-  <!-- 1. Hero: "Reason Over Hype" collapses into ROH on scroll -->
+  <!-- 1. Hero: "Reason Over Hype" collapses into ROH by itself right after the page opens -->
   <section class="hero" aria-label="Reason Over Hype">
     <div class="stage">
       <h1 class="line" id="line">
@@ -362,7 +362,7 @@
 <script>
 (() => {
   const b = document.getElementById('toTop'), hero = document.querySelector('.hero');
-  const sync = () => b.classList.toggle('show', scrollY > hero.offsetHeight - innerHeight + 40);
+  const sync = () => b.classList.toggle('show', scrollY > hero.offsetHeight * .6);
   addEventListener('scroll', sync, { passive: true }); addEventListener('resize', sync); sync();
 })();
 </script>
@@ -384,7 +384,6 @@
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduce) return;
 
-  const hero = document.querySelector('.hero');
   const line = document.getElementById('line');
   const words = [...line.querySelectorAll('.word')];
   const rests = [...line.querySelectorAll('.rest')];
@@ -408,9 +407,8 @@
     update();
   }
 
+  let p = 0;   // intro progress 0 → 1, driven by time (see play() below)
   function update(){
-    const total = hero.offsetHeight - innerHeight;
-    const p = clamp(-hero.getBoundingClientRect().top / total, 0, 1);
     // Stage 1 (p 0 → .5): Reason Over Hype → ROH   |   Stage 2 (p .5 → 1): Chanyoung + tagline
     const c = ease(clamp(p / .45, 0, 1));          // collapse phase
     const s = ease(clamp((p - .15) / .35, 0, 1));  // grow phase (done by p=.5)
@@ -433,13 +431,23 @@
     const t = clamp((p - .72) / .23, 0, 1);
     tagline.style.opacity = t;
     tagline.style.transform = `translateY(${12 * (1 - t) + drop}px)`;
-    cue.style.opacity = 1 - clamp(p * 6, 0, 1);
+    cue.style.opacity = clamp((p - .9) / .1, 0, 1);   // 'Scroll' hint shows once the intro has finished
   }
 
-  document.fonts.ready.then(measure);
+  // Hold "Reason Over Hype." for a moment, then play the whole collapse → "Chanyoung ROH" + tagline
+  const HOLD = 1000, DUR = 2000;
+  function play(){
+    const t0 = performance.now() + HOLD;
+    (function step(now){
+      p = clamp((now - t0) / DUR, 0, 1);
+      update();
+      if (p < 1) requestAnimationFrame(step);
+    })(performance.now());
+  }
+
   addEventListener('resize', measure);
-  addEventListener('scroll', update, { passive: true });
   measure();
+  document.fonts.ready.then(() => { measure(); play(); });   // start once the font is in, so the measured widths are right
 })();
 </script>
 <script>
@@ -476,7 +484,7 @@
   function buildStops(){
     const max = maxScroll(), vh = innerHeight, pts = [];
     sections.forEach(el => {
-      if (el === hero) { const top = topOf(el); pts.push(top, top + el.offsetHeight - vh); return; } // hero: one swipe plays Reason Over Hype → ROH → Chanyoung ROH
+      if (el === hero) { pts.push(topOf(el)); return; }   // hero is one screen now
       const s0 = stopOf(el), { top, h } = box(el);
       const end = top + h + GAP - vh;                                        // content's bottom edge just above the screen bottom
       pts.push(s0);
@@ -493,9 +501,7 @@
   function go(target){
     const from = scrollY, dist = target - from;
     if (Math.abs(dist) < 2) return;
-    const heroEnd = hero.offsetHeight - innerHeight + 2;
-    const isHero = from <= heroEnd && target <= heroEnd;
-    const dur = isHero ? 2000 : 600;       // the whole intro in one smooth ride
+    const dur = 600;
     const t0 = performance.now();
     animating = true;
     (function step(now){
