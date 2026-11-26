@@ -55,6 +55,8 @@
   html{scroll-behavior:smooth;overscroll-behavior-y:none}
   body{font-optical-sizing:auto;transition:background .35s,color .35s;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;font-weight:600;line-height:1.55;-webkit-font-smoothing:antialiased}
   a{color:inherit}
+  /* Drag-to-select highlight: the site's pink accent, with black text so it stays readable in light and dark */
+  ::selection{background:var(--accent);color:#000}
   a:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
   .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
 
