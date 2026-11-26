@@ -36,6 +36,7 @@
     --ph-ink:rgba(0,0,0,.45);
     --on-accent:#000;
     --soft:rgba(0,0,0,.06);
+    --spark:#e8a93c; --spark-glow:rgba(232,169,60,.45);   /* cursor sparkles: soft gold on cream */
     --display:"Inter", "Pretendard", -apple-system, BlinkMacSystemFont, sans-serif;
     --body:"Inter", "Pretendard", -apple-system, BlinkMacSystemFont, sans-serif;
   }
@@ -49,6 +50,7 @@
     --nav:rgba(0,0,0,.72);
     --ph-ink:rgba(255,255,255,.45);
     --soft:rgba(255,255,255,.1);
+    --spark:#fff4d6; --spark-glow:rgba(255,226,160,.7);   /* warm starlight on black */
     color-scheme:dark;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -236,6 +238,11 @@
 
   /* Shooting stars: a fixed layer behind everything, so they pass behind the text and tiles */
   .sky{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+  /* Cursor sparkles: the outline icons are used as a mask and filled with a starlight colour.
+     The glow sits on the wrapper because a filter on the masked element itself would be cut off by the mask. */
+  .trail{position:fixed;inset:0;z-index:30;pointer-events:none;overflow:hidden}
+  .tw{position:absolute;left:0;top:0;filter:drop-shadow(0 0 3px var(--spark-glow)) drop-shadow(0 0 8px var(--spark-glow));will-change:transform,opacity}
+  .tw b{display:block;width:100%;height:100%;background:var(--spark);-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
   .shoot{position:absolute;left:0;top:0;will-change:transform,opacity}
   .shoot i{position:absolute;right:50%;top:50%;height:3px;margin-top:-1.5px;border-radius:3px;background:linear-gradient(90deg,transparent,rgba(255,206,90,.75))}
   .shoot img{position:relative;display:block;width:100%;height:100%}
@@ -821,6 +828,40 @@
 
   schedule(params.has('bear') ? 600 : rnd(10000, 25000));  // ?bear = summon it right away (for testing)
   document.addEventListener('visibilitychange', () => { if (document.hidden && walking) hide(); });
+})();
+</script>
+<div class="trail" id="trail" aria-hidden="true"></div>
+<script>
+/* Sparkles that trail the mouse pointer and drift down as they fade (mouse/trackpad only, not touch) */
+(() => {
+  if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const box = document.getElementById('trail');
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  let lx = -99, ly = -99, lt = 0;
+
+  addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse') return;
+    const now = performance.now();
+    if (Math.hypot(e.clientX - lx, e.clientY - ly) < 22 || now - lt < 45) return;   // only every so often, so it stays subtle
+    if (box.childElementCount > 24) return;
+    lx = e.clientX; ly = e.clientY; lt = now;
+
+    const size = rnd(16, 26);
+    const el = document.createElement('div'); el.className = 'tw';
+    el.style.width = el.style.height = size + 'px';
+    const b = document.createElement('b');
+    b.style.setProperty('--m', `url(images/sparkles/sparkle-${1 + Math.floor(Math.random() * 4)}.png)`);
+    el.append(b); box.append(el);
+
+    const x = lx + rnd(-8, 8) - size / 2, y = ly + rnd(-8, 8) - size / 2;
+    const r0 = rnd(-30, 30), r1 = r0 + rnd(-60, 60);
+    el.animate([
+      { transform: `translate(${x}px,${y}px) rotate(${r0}deg) scale(.6)`, opacity: 0 },
+      { transform: `translate(${x}px,${y + 4}px) rotate(${r0}deg) scale(1)`, opacity: .95, offset: .15 },
+      { transform: `translate(${x + rnd(-10, 10)}px,${y + rnd(24, 44)}px) rotate(${r1}deg) scale(.3)`, opacity: 0 }
+    ], { duration: rnd(750, 1100), easing: 'ease-out' }).onfinish = () => el.remove();
+  }, { passive: true });
 })();
 </script>
 <div class="sky" id="sky" aria-hidden="true"></div>
