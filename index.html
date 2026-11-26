@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chanyoung Roh — Reason Over Hype</title>
-<meta name="description" content="Chanyoung Roh — Vision AI researcher working on Sparse Autoencoders for video interpretability.">
+<meta name="description" content="Chanyoung Roh — Vision AI researcher asking whether video models are right for the right reasons.">
 <meta property="og:title" content="Chanyoung Roh — Reason Over Hype">
-<meta property="og:description" content="Vision AI researcher working on Sparse Autoencoders for video.">
+<meta property="og:description" content="Vision AI researcher asking whether video models are right for the right reasons.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://chanyoung-roh.github.io/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23fe748a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-weight='900' font-size='40' text-anchor='middle' fill='%23000'%3ER%3C/text%3E%3C/svg%3E">
@@ -125,7 +125,7 @@
   .tile.big .photo{min-height:340px}
 
   .grid{grid-template-columns:1.4fr 1fr}
-  .tile.big{grid-row:auto}
+  .tile.big{grid-row:span 2}
   .tag{align-self:flex-start;padding:6px 12px;border-radius:999px;background:var(--soft);font-size:13px;font-weight:800;color:var(--muted)}
 
   /* Gallery */
@@ -263,7 +263,7 @@
         <span class="word"><span class="initial">O</span><span class="rest">ver</span></span>
         <span class="word"><span class="initial">H</span><span class="rest">ype.</span></span>
       </h1>
-      <p class="tagline" id="tagline">Hi, I'm Chanyoung Roh. I build Vision AI that holds up after the demo ends.</p>
+      <p class="tagline" id="tagline">Hi, I'm Chanyoung Roh. I want video models that are right for the right reasons.</p>
       <span class="cue" id="cue">Scroll</span>
     </div>
   </section>
@@ -271,8 +271,8 @@
   <!-- 2. Statement + wide photo -->
   <section class="statement">
     <div class="wrap">
-      <h2>I study what models see, and when they see it.</h2>
-      <p>My research looks at video, where meaning lives on the time axis. Some features only show up when frames move.</p>
+      <h2>Right answer. Right reason.</h2>
+      <p>Video models often answer from the background, not the action. Accuracy can't tell the difference, so I look inside the model first, then train it to look at what actually happens over time.</p>
     </div>
   </section>
 
@@ -282,7 +282,7 @@
       <div class="photo portrait"><img src="images/me.jpg" alt="Portrait of Chanyoung Roh" width="1200" height="1500" loading="lazy"></div>
       <div>
         <h2>Vision AI researcher, forward thinker.</h2>
-        <p>I work on Sparse Autoencoders for video, pulling apart the features a model learns across space and time.</p>
+        <p>I study whether video models are right for the right reasons, and I design training signals that make them so.</p>
         <p>I'd rather understand one model deeply than chase every new benchmark. Evidence first, excitement second.</p>
         <div class="links">
           <a class="btn solid" href="mailto:cksdud2605@khu.ac.kr">Email me</a>
@@ -303,11 +303,17 @@
       <h2>Work</h2>
       <div class="grid">
         <article class="tile big">
-          <h3>Temporal SAE</h3>
-          <p>Sparse Autoencoders that find features only the time axis can reveal.</p>
+          <span class="tag">Diagnose</span>
+          <h3>Motion vs. appearance</h3>
+          <p>A Motion SAE on video encoders that pulls apart what moves from what's in the scene, so you can see which one a prediction leans on.</p>
         </article>
         <article class="tile">
-          <h3>Interpretability notes</h3>
+          <span class="tag">Prescribe · in progress</span>
+          <h3>Reward the reason</h3>
+          <p>RL and preference training that rewards the answer grounded in motion, not the same answer read off the scene.</p>
+        </article>
+        <article class="tile">
+          <h3>Research notes</h3>
           <p>Short write-ups on what I tried, and what broke.</p>
           <span class="tag">Coming soon</span>
         </article>
@@ -328,7 +334,7 @@
 <footer id="contact">
   <div class="wrap">
     <div class="sign"><b>R</b>eason <b>O</b>ver <b>H</b>ype.</div>
-    <p>Have a question about video interpretability? <a href="mailto:cksdud2605@khu.ac.kr">cksdud2605@khu.ac.kr</a></p>
+    <p>Want to talk about why video models get things right? <a href="mailto:cksdud2605@khu.ac.kr">cksdud2605@khu.ac.kr</a></p>
     <small>© 2026 Chanyoung Roh</small>
   </div>
 </footer>
