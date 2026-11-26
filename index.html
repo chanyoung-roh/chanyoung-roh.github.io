@@ -447,7 +447,15 @@
 
   addEventListener('resize', measure);
   measure();
-  document.fonts.ready.then(() => { measure(); play(); });   // start once the font is in, so the measured widths are right
+  // Re-measure when the web font arrives, but never WAIT for it: on iPhone Safari fonts.ready can stay pending,
+  // which left the intro stuck on "Reason Over Hype." The animation is time-based, so a late re-measure is harmless.
+  if (document.fonts) document.fonts.ready.then(measure).catch(() => {});
+  // Start when the page is actually on screen (a tab opened in the background would otherwise finish unseen)
+  if (document.visibilityState === 'visible') play();
+  else document.addEventListener('visibilitychange', function once(){
+    if (document.visibilityState !== 'visible') return;
+    document.removeEventListener('visibilitychange', once); play();
+  });
 })();
 </script>
 <script>
