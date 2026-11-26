@@ -838,29 +838,37 @@
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const box = document.getElementById('trail');
   const rnd = (a, b) => a + Math.random() * (b - a);
-  let lx = -99, ly = -99, lt = 0;
+  let lx = null, ly = null;
 
-  addEventListener('pointermove', e => {
-    if (e.pointerType !== 'mouse') return;
-    const now = performance.now();
-    if (Math.hypot(e.clientX - lx, e.clientY - ly) < 22 || now - lt < 45) return;   // only every so often, so it stays subtle
-    if (box.childElementCount > 24) return;
-    lx = e.clientX; ly = e.clientY; lt = now;
-
-    const size = rnd(16, 26);
+  // One sparkle at (x, y): it appears at full size (no pop-in) and slowly shrinks, drifts down and fades
+  function spark(x, y) {
+    const size = rnd(20, 32);
     const el = document.createElement('div'); el.className = 'tw';
     el.style.width = el.style.height = size + 'px';
     const b = document.createElement('b');
     b.style.setProperty('--m', `url(images/sparkles/sparkle-${1 + Math.floor(Math.random() * 4)}.png)`);
     el.append(b); box.append(el);
-
-    const x = lx + rnd(-8, 8) - size / 2, y = ly + rnd(-8, 8) - size / 2;
-    const r0 = rnd(-30, 30), r1 = r0 + rnd(-60, 60);
+    x += rnd(-4, 4) - size / 2; y += rnd(-4, 4) - size / 2;
+    const r0 = rnd(-25, 25), r1 = r0 + rnd(-40, 40);
     el.animate([
-      { transform: `translate(${x}px,${y}px) rotate(${r0}deg) scale(.6)`, opacity: 0 },
-      { transform: `translate(${x}px,${y + 4}px) rotate(${r0}deg) scale(1)`, opacity: .95, offset: .15 },
-      { transform: `translate(${x + rnd(-10, 10)}px,${y + rnd(24, 44)}px) rotate(${r1}deg) scale(.3)`, opacity: 0 }
-    ], { duration: rnd(750, 1100), easing: 'ease-out' }).onfinish = () => el.remove();
+      { transform: `translate(${x}px,${y}px) rotate(${r0}deg) scale(1)`, opacity: .85 },
+      { transform: `translate(${x + rnd(-8, 8)}px,${y + rnd(18, 34)}px) rotate(${r1}deg) scale(.35)`, opacity: 0 }
+    ], { duration: rnd(900, 1300), easing: 'cubic-bezier(.25,.6,.4,1)' }).onfinish = () => el.remove();
+  }
+
+  addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse') return;
+    const x = e.clientX, y = e.clientY;
+    if (lx === null) { lx = x; ly = y; return; }
+    // Lay sparkles evenly along the path since the last one, so a fast swipe still leaves a smooth, unbroken trail
+    const STEP = 16, d = Math.hypot(x - lx, y - ly);
+    if (d < STEP) return;
+    const n = Math.min(Math.floor(d / STEP), 6);         // very fast moves: spread at most 6 evenly instead of leaving a gap
+    for (let i = 1; i <= n && box.childElementCount < 60; i++) {
+      const t = i / n;
+      spark(lx + (x - lx) * t, ly + (y - ly) * t);
+    }
+    lx = x; ly = y;
   }, { passive: true });
 })();
 </script>
