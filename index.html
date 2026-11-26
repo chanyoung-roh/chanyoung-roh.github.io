@@ -173,6 +173,7 @@
   footer small{display:block;margin-top:64px;color:var(--muted);font-size:13px}
 
   @media (max-width:820px){
+    .stage{padding-top:0}   /* phones: the small hero block reads as low when centred under the nav, so centre it on the whole screen */
     .nav-right{gap:14px}
     nav ul{gap:16px;font-size:15px}
     .lb .prev,.lb .next{top:auto;bottom:24px;margin:0}
@@ -399,8 +400,8 @@
     words.forEach((w, i) => {
       if (i < words.length - 1) w.style.marginRight = (gap * (1 - c) + gap * .1 * c) + 'px';
     });
-    // Final "Chanyoung / ROH / tagline" block is top-heavy, so slide it (and the tagline) down a bit as it grows
-    const em = parseFloat(line.style.fontSize) || 0, drop = s * .5 * em;
+    // Final "Chanyoung / ROH / tagline" block is top-heavy, so slide it (and the tagline) down a bit as it grows (wide screens only)
+    const em = parseFloat(line.style.fontSize) || 0, drop = innerWidth > 820 ? s * .5 * em : 0;
     line.style.transform = `translateY(${drop - s * .15 * em}px) scale(${1 + s * .7})`;
 
     const f = ease(clamp((p - .55) / .25, 0, 1));   // stage 2: first name appears
