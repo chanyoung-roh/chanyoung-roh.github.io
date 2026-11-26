@@ -825,7 +825,7 @@
 </script>
 <div class="sky" id="sky" aria-hidden="true"></div>
 <script>
-/* Shooting stars: one every 3-8 s (random), falling diagonally at a random, fairly quick speed */
+/* Shooting stars: one every 6-12 s (random), falling diagonally through the middle of the screen */
 (() => {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const sky = document.getElementById('sky');
@@ -835,12 +835,16 @@
 
   function shoot() {
     const W = innerWidth, H = innerHeight;
-    const size = rnd(44, 84);
+    const size = Math.min(rnd(58, 104), W * .24);      // a bit smaller on narrow phones so it isn't huge
     const dir = Math.random() < .5 ? -1 : 1;          // fall to the left or right
-    const ang = rnd(28, 52) * Math.PI / 180;           // angle below horizontal
-    const dist = Math.hypot(W, H) * .9;
-    const dx = Math.cos(ang) * dist * dir, dy = Math.sin(ang) * dist;
-    const x0 = dir > 0 ? rnd(-.15, .6) * W : rnd(.4, 1.15) * W, y0 = -size - rnd(0, 60);
+    // Phones are tall, so fall more steeply there; otherwise the path cuts across a top corner and misses the screen
+    const ang = (W < H ? rnd(58, 74) : rnd(30, 50)) * Math.PI / 180;
+    const ux = Math.cos(ang) * dir, uy = Math.sin(ang);
+    // Pick a point in the middle of the screen and run the path through it, from above the top edge to below the bottom
+    const cx = rnd(.2, .8) * W, cy = rnd(.25, .65) * H, pad = size + 40;
+    const back = (cy + pad) / uy, fwd = (H - cy + pad) / uy;
+    const x0 = cx - ux * back - size / 2, y0 = cy - uy * back - size / 2;
+    const dx = ux * (back + fwd), dy = uy * (back + fwd);
 
     const el = document.createElement('div'); el.className = 'shoot';
     el.style.width = el.style.height = size + 'px';
@@ -851,21 +855,22 @@
     // Tail points back along the path; the star itself spins as it falls
     const deg = Math.atan2(dy, dx) * 180 / Math.PI;
     tail.style.transformOrigin = '100% 50%'; tail.style.transform = `rotate(${deg}deg)`;
-    const dur = rnd(1300, 2600);                       // quick, like a shooting star
+    const dur = Math.max(2400, Math.hypot(dx, dy) / rnd(260, 400) * 1000);   // 260-400 px/s: quick but easy to follow
     const spin = rnd(180, 540) * dir;
     img.animate([{ transform: 'rotate(0deg)' }, { transform: `rotate(${spin}deg)` }], { duration: dur, easing: 'linear' });
     el.animate([
       { transform: `translate(${x0}px,${y0}px)`, opacity: 0 },
-      { opacity: 1, offset: .08 },
-      { opacity: 1, offset: .8 },
+      { opacity: 1, offset: .06 },
+      { opacity: 1, offset: .85 },
       { transform: `translate(${x0 + dx}px,${y0 + dy}px)`, opacity: 0 }
-    ], { duration: dur, easing: 'cubic-bezier(.3,.1,.6,1)' }).onfinish = () => el.remove();
+    ], { duration: dur, easing: 'cubic-bezier(.35,.15,.7,1)' }).onfinish = () => el.remove();
   }
 
-  (function loop() {
+  function loop() {
     if (!document.hidden) shoot();                     // don't pile them up in a background tab
-    setTimeout(loop, rnd(3000, 8000));
-  })();
+    setTimeout(loop, rnd(6000, 12000));
+  }
+  setTimeout(loop, rnd(1500, 3000));                   // first one shortly after the page opens
 })();
 </script>
 </body>
