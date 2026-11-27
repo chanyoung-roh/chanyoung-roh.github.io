@@ -248,9 +248,10 @@
   .trail{position:fixed;inset:0;z-index:30;pointer-events:none;overflow:hidden}
   .tw{position:absolute;left:0;top:0;filter:drop-shadow(0 0 3px var(--spark-glow)) drop-shadow(0 0 8px var(--spark-glow));will-change:transform,opacity}
   .tw b{display:block;width:100%;height:100%;background:var(--spark);-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
-  .shoot{position:absolute;left:0;top:0;will-change:transform,opacity}
-  .shoot i{position:absolute;right:50%;top:50%;height:3px;margin-top:-1.5px;border-radius:3px;background:linear-gradient(90deg,transparent,rgba(255,206,90,.75))}
-  .shoot img{position:relative;display:block;width:100%;height:100%}
+  .shoot{position:absolute;left:0;top:0;will-change:transform,opacity;filter:drop-shadow(0 0 4px var(--spark-glow)) drop-shadow(0 0 12px var(--spark-glow))}
+  .shoot i{position:absolute;right:50%;top:50%;height:3px;margin-top:-1.5px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--spark))}
+  /* the sparkle outline icon used as a mask, filled with the same starlight colour as the cursor sparkles */
+  .shoot b{position:relative;display:block;width:100%;height:100%;background:var(--spark);-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
 </style>
 </head>
 <body>
@@ -904,13 +905,13 @@
 (() => {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const sky = document.getElementById('sky');
-  const srcs = [1, 2, 3, 4].map(n => `images/stars/star-${n}.png`);
+  const srcs = [1, 2, 3, 4].map(n => `images/sparkles/sparkle-${n}.png`);
   srcs.forEach(s => { new Image().src = s; });   // preload so the first one doesn't pop in blank
   const rnd = (a, b) => a + Math.random() * (b - a);
 
   function shoot() {
     const W = innerWidth, H = innerHeight;
-    const size = Math.min(rnd(58, 104), W * .24);      // a bit smaller on narrow phones so it isn't huge
+    const size = Math.min(rnd(48, 84), W * .2);       // a bit smaller on narrow phones so it isn't huge
     const dir = Math.random() < .5 ? -1 : 1;          // fall to the left or right
     // Phones are tall, so fall more steeply there; otherwise the path cuts across a top corner and misses the screen
     const ang = (W < H ? rnd(58, 74) : rnd(30, 50)) * Math.PI / 180;
@@ -924,14 +925,14 @@
     const el = document.createElement('div'); el.className = 'shoot';
     el.style.width = el.style.height = size + 'px';
     const tail = document.createElement('i'); tail.style.width = size * rnd(2.2, 3.6) + 'px';
-    const img = document.createElement('img'); img.src = srcs[Math.floor(Math.random() * srcs.length)]; img.alt = '';
+    const img = document.createElement('b'); img.style.setProperty('--m', `url(${srcs[Math.floor(Math.random() * srcs.length)]})`);
     el.append(tail, img); sky.append(el);
 
     // Tail points back along the path; the star itself spins as it falls
     const deg = Math.atan2(dy, dx) * 180 / Math.PI;
     tail.style.transformOrigin = '100% 50%'; tail.style.transform = `rotate(${deg}deg)`;
     const dur = Math.max(2400, Math.hypot(dx, dy) / rnd(260, 400) * 1000);   // 260-400 px/s: quick but easy to follow
-    const spin = rnd(180, 540) * dir;
+    const spin = rnd(60, 200) * dir;              // a gentle turn; a fast spin looks fussy on a sparkle
     img.animate([{ transform: 'rotate(0deg)' }, { transform: `rotate(${spin}deg)` }], { duration: dur, easing: 'linear' });
     el.animate([
       { transform: `translate(${x0}px,${y0}px)`, opacity: 0 },
