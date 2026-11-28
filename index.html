@@ -228,6 +228,7 @@
   /* Pointer over a note → it goes see-through so you can read what's under it. Uses filter, not opacity,
      because the stick-on animation holds opacity at 1. Notes still let clicks through to the page. */
   .gb-note{transition:filter .25s}
+  .gb-note.over{filter:opacity(.5)}   /* stuck on top of text or a photo/card: half see-through from the start */
   .gb-note.peek{filter:opacity(.15)}
   @keyframes gb-stick{from{opacity:0;transform:translate(-50%,-90%) rotate(var(--r,0deg)) scale(1.15)}to{opacity:1;transform:translate(-50%,-50%) rotate(var(--r,0deg))}}
   .gb-form{z-index:2;width:200px;padding:14px;border-radius:14px;background:#fff9ef;pointer-events:auto;display:grid;gap:8px;--r:-2deg;
@@ -745,7 +746,31 @@
     const b = document.createElement('b'); b.textContent = n.memo;
     const i = document.createElement('i'); i.textContent = '— ' + n.name;
     d.append(b, i); place(d, n); lay.L.append(d);
+    queueOverlap();
   }
+
+  // Notes that sit on top of text, buttons, cards or photos get the .over class (half see-through).
+  // Text is measured line by line (a paragraph's box is much wider than its words), the rest by its box.
+  const TEXT = 'main h1, main h2, main h3, main p, footer .sign, footer small';
+  const BOXES = '.btn, .tile, .photo, .shot, .social a, .social span, .tag';
+  const hit = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  function markOverlaps(){
+    const notes = document.querySelectorAll('.gb-note'); if (!notes.length) return;
+    const rects = [];
+    const range = document.createRange();
+    document.querySelectorAll(TEXT).forEach(el => { range.selectNodeContents(el); rects.push(...range.getClientRects()); });
+    document.querySelectorAll(BOXES).forEach(el => rects.push(el.getBoundingClientRect()));
+    notes.forEach(n => {
+      const r = n.getBoundingClientRect(), inner = { left: r.left + 6, right: r.right - 6, top: r.top + 6, bottom: r.bottom - 6 };
+      n.classList.toggle('over', rects.some(x => x.width && x.height && hit(inner, x)));
+    });
+  }
+  let overlapTimer = 0;
+  // wait for the stick-on animation to settle before measuring where a note ended up
+  const queueOverlap = () => { clearTimeout(overlapTimer); overlapTimer = setTimeout(markOverlaps, 900); };
+  addEventListener('resize', queueOverlap);
+  addEventListener('load', queueOverlap);   // gallery photos change the layout as they load
+  setTimeout(markOverlaps, 3600);   // after the hero intro, when "Chanyoung ROH" has reached its final size
 
   // Notes ignore the pointer (so links under them still work), so hover is worked out from the pointer position instead
   let px = -1, py = -1, peekQueued = false;
