@@ -228,8 +228,8 @@
   /* Pointer over a note → it goes see-through so you can read what's under it. Uses filter, not opacity,
      because the stick-on animation holds opacity at 1. Notes still let clicks through to the page. */
   .gb-note{transition:filter .25s}
-  .gb-note.peek{filter:opacity(.15)}
-  /* Stuck on top of text or a photo/card: almost see-through so the content reads, and it comes up when you point at it */
+  /* Stuck on top of text or a photo/card: almost see-through so the content reads, and it comes up when you point at it.
+     Notes in empty space stay solid and don't react to hover. */
   .gb-note.over{filter:opacity(.15)}
   .gb-note.over.peek{filter:opacity(.8)}
   @keyframes gb-stick{from{opacity:0;transform:translate(-50%,-90%) rotate(var(--r,0deg)) scale(1.15)}to{opacity:1;transform:translate(-50%,-50%) rotate(var(--r,0deg))}}
