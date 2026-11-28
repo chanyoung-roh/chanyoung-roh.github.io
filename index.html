@@ -225,6 +225,10 @@
   .gb-note b{display:block;font-weight:900;font-size:17px;line-height:1.2;letter-spacing:-.02em;word-break:keep-all;overflow-wrap:anywhere}
   .gb-note i{display:block;margin-top:6px;font-style:normal;font-weight:700;font-size:12px;opacity:.6}
   .gb-note.mine{outline:2px dashed rgba(0,0,0,.35);outline-offset:3px}
+  /* Pointer over a note → it goes see-through so you can read what's under it. Uses filter, not opacity,
+     because the stick-on animation holds opacity at 1. Notes still let clicks through to the page. */
+  .gb-note{transition:filter .25s}
+  .gb-note.peek{filter:opacity(.15)}
   @keyframes gb-stick{from{opacity:0;transform:translate(-50%,-90%) rotate(var(--r,0deg)) scale(1.15)}to{opacity:1;transform:translate(-50%,-50%) rotate(var(--r,0deg))}}
   .gb-form{z-index:2;width:200px;padding:14px;border-radius:14px;background:#fff9ef;pointer-events:auto;display:grid;gap:8px;--r:-2deg;
            animation:gb-stick .4s cubic-bezier(.2,1.4,.4,1) both}
@@ -509,7 +513,7 @@
       const s0 = stopOf(el), { top, h } = box(el);
       const end = top + h + GAP - vh;                                        // content's bottom edge just above the screen bottom
       pts.push(s0);
-      if (end - s0 > vh * .15) {                                             // tall content only (centred content has end < s0)
+      if (vh > 100 && end - s0 > vh * .15) {                                 // tall content only (centred content has end < s0); a 0-height window would loop forever
         for (let y = s0 + vh * .8; y < end - vh * .25; y += vh * .8) pts.push(y);      // page through
         pts.push(end);
       }
@@ -742,6 +746,27 @@
     const i = document.createElement('i'); i.textContent = '— ' + n.name;
     d.append(b, i); place(d, n); lay.L.append(d);
   }
+
+  // Notes ignore the pointer (so links under them still work), so hover is worked out from the pointer position instead
+  let px = -1, py = -1, peekQueued = false;
+  function peek(){
+    peekQueued = false;
+    document.querySelectorAll('.gb-note').forEach(n => {
+      const r = n.getBoundingClientRect();
+      n.classList.toggle('peek', px >= r.left && px <= r.right && py >= r.top && py <= r.bottom);
+    });
+  }
+  const queuePeek = () => { if (!peekQueued) { peekQueued = true; requestAnimationFrame(peek); } };
+  addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { px = e.clientX; py = e.clientY; queuePeek(); } }, { passive: true });
+  addEventListener('scroll', () => { if (px >= 0) queuePeek(); }, { passive: true });   // page moves under a still cursor
+  document.addEventListener('mouseleave', () => { px = py = -1; queuePeek(); });
+  // Touch: tap a note to see through it for a few seconds
+  let peekTimer = 0;
+  addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse') return;
+    px = e.clientX; py = e.clientY; peek();
+    clearTimeout(peekTimer); peekTimer = setTimeout(() => { px = py = -1; peek(); }, 3000);
+  }, { passive: true });
 
   let loaded = false;
   async function loadNotes(){
